@@ -90,7 +90,7 @@ python3 server.py          # 默认端口 8787
 
 ## 原生 app 和网页版 / PWA 的区别
 
-网页版是照着 iOS 版重新写的一份，日常玩法基本都有，但有些东西只有原生 app 做得到。如果你有自己的网页或 PWA，想把冰箱接进去，或者想用网页套壳做 app，下面这张表可以帮你判断哪些能做、哪些做不了。
+网页版是照着 iOS 版重新写的一份，日常玩法基本都有，但有些东西只有原生 app 做得到。如果你在纠结是把冰箱接进自己的 iOS app、还是接进网页 / PWA，或者想用网页套壳做 app，下面这张表可以帮你判断哪些能做、哪些做不了。两种接法分别见后面的「接进你自己的 iOS app」和「接进你自己的网页 / PWA」。
 
 | 功能 | iOS 原生 | 网页 / PWA | 说明 |
 |---|:---:|:---:|---|
@@ -106,6 +106,77 @@ python3 server.py          # 默认端口 8787
 | 两台设备同步、接 AI 工具 | ✓ | ✓ | 网页版设一个开关就能连同一个后端，见下面「接进你自己的网页 / PWA」；多台同时改时网页版以最后写的为准 |
 | 没网也能用 | ✓ | ✓ | 网页版第一次打开后由离线缓存提供 |
 | 存照片的容量 | 不限 | 约 5MB | 网页版存在浏览器本地存储里，照片多了会存不下 |
+
+## 接进你自己的 iOS app
+
+冰箱就是一个 SwiftUI 页面 `FridgePageView`，可以直接放进你自己的 app 里，当成其中一页。需要 iOS 17 或更新。
+
+### 1. 拷代码
+
+把 `ios/FridgeDemo.swiftpm/Sources/` 里这几个文件拖进你的 Xcode 工程（勾选「Copy items if needed」，并勾上你的 app target）：
+
+| 文件 | 作用 |
+|---|---|
+| `FridgeModels.swift` | 数据、食材库、本机存储和可选的同步 |
+| `FridgePage.swift` | 冰箱页本身（舞台、开门、分区、门上的东西） |
+| `FridgeDecor.swift` | 便签、贴纸、揭下 / 贴上动画、拍照抠图 |
+| `FridgeSheets.swift` | 底部弹层：放进冰箱、详情、便签、照片、换颜色 |
+| `FridgeSupport.swift` | `Color(cpHex:)`、简单的主题 `FridgeTheme`、顶栏、字体注册 |
+
+**不要**拷 `FridgeDemoApp.swift`，那是演示 app 的入口，你的 app 有自己的入口。
+
+如果你的工程里已经有同名的东西（比如自己也写了 `Color(cpHex:)` 扩展），删掉 `FridgeSupport.swift` 里重复的那一份即可。
+
+### 2. 拷图片和字体
+
+把 `ios/FridgeDemo.swiftpm/Sources/Resources/` 下的 `Fridge` 和 `Fonts` 两个文件夹拖进工程，**选「Create folder references」**（蓝色文件夹，不是黄色的 group）。代码是按 `Fridge/xxx.png`、`Fridge/stickers/xxx.png`、`Fonts/xxx.ttf` 这样的子目录路径去 app 包里找文件的，用黄色 group 会把目录拍平，就找不到图了。
+
+### 3. 启动时注册字体
+
+在你的 `App` 的 `init()` 里加一行（或者在 `AppDelegate` 的启动方法里）：
+
+```swift
+@main
+struct MyApp: App {
+    init() { FridgeFonts.registerBundled() }
+    var body: some Scene { WindowGroup { ContentView() } }
+}
+```
+
+不注册也能用，只是快乐体和手写体会退回系统字体。也可以改成在 `Info.plist` 的 `UIAppFonts` 里声明这两个字体，效果一样。
+
+### 4. 放进你的页面
+
+```swift
+struct FridgeScreen: View {
+    @StateObject private var theme = FridgeTheme()
+    var body: some View {
+        FridgePageView(theme: theme)
+    }
+}
+```
+
+然后像普通页面一样用就行，比如放进 `NavigationStack` 里 push 过去、放进 `TabView` 当一个标签、或者 `.fullScreenCover` 弹出来。冰箱页自己铺满背景、自己处理安全区；如果你的导航栏挡住了顶部，可以给它加 `.toolbar(.hidden, for: .navigationBar)`。
+
+### 5. 权限
+
+拍照、从相册选图要在你 app 的 `Info.plist` 里加两项说明文字，不加的话一点「拍照」就会闪退：
+
+- `NSCameraUsageDescription`，比如「拍照做成食物贴纸」
+- `NSPhotoLibraryUsageDescription`，比如「从相册选照片贴在冰箱门上」
+
+（iOS 的相册选择器其实不需要相册权限，但加上更保险。）
+
+### 6. 配色和数据
+
+- **配色**：`FridgeTheme` 里只有几个颜色，改成你 app 的颜色即可；想跟你 app 已有的主题联动，把 `FridgePageView` 里用到 `theme.xxx` 的地方换成你自己的主题对象。
+- **数据**：存在 `UserDefaults`，键名是 `fridge.v1`（另有 `fridge.sync.url`、`fridge.sync.token`）；照片存在 app 的 Application Support 目录下。如果和你 app 已有的键名冲突，在 `FridgeModels.swift` 里搜这几个键名改掉。
+- **同步**：右上角齿轮里填服务器地址和 token；想在代码里写死，就在 app 启动时调用一次：
+
+  ```swift
+  FridgeStore.shared.setSync(url: "https://你的域名", token: "你的 token")
+  ```
+- **不要的功能**：比如不想要拍照抠图，删掉 `FridgeSheets.swift` 里「拍照」那个按钮即可，其他部分不受影响。
 
 ## 接进你自己的网页 / PWA
 
