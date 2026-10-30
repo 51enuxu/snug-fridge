@@ -158,8 +158,10 @@ struct FridgeEditorSheet: View {
 
     private static func applyShelfLife(_ days: Int, to item: inout FridgeItem) {
         let cal = Calendar.current
-        item.eatBy = cal.date(byAdding: .day, value: max(days - 1, 0), to: Date())
-        item.expiresAt = cal.date(byAdding: .day, value: days, to: Date())
+        // 从放进来那天起算：补记前几天放的东西，日期不会被往后推
+        let start = cal.startOfDay(for: item.addedAt)
+        item.eatBy = cal.date(byAdding: .day, value: max(days - 1, 0), to: start)
+        item.expiresAt = cal.date(byAdding: .day, value: days, to: start)
     }
 
     var body: some View {
@@ -185,6 +187,11 @@ struct FridgeEditorSheet: View {
                         .pickerStyle(.menu)
                         .tint(fridgeInk)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    // 补记前几天买的东西：放入日期可以往前改
+                    field("放进来") {
+                        DatePicker("放进来的日期", selection: $draft.addedAt, in: ...Date(), displayedComponents: .date)
+                            .font(FridgeFont.cute(15))
                     }
                     field("建议吃完") {
                         Toggle(isOn: $hasDueDate) {
@@ -214,6 +221,7 @@ struct FridgeEditorSheet: View {
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: draft.zone) { _ in autoDue() }
             .onChange(of: draft.stickerAsset) { _ in autoDue() }
+            .onChange(of: draft.addedAt) { _ in autoDue() }
             .background(fridgePaper.ignoresSafeArea())
             .fridgeDismissKeyboardOnTap()
             .navigationTitle(target.item == nil ? "放进冰箱" : "改一改")
@@ -417,7 +425,7 @@ struct FridgeEditorSheet: View {
 
     private var dueSuggestion: some View {
         let hint = suggestedDays
-        let current = draft.eatBy.map { (Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()),
+        let current = draft.eatBy.map { (Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: draft.addedAt),
                                                                           to: Calendar.current.startOfDay(for: $0)).day ?? 0) + 1 } ?? hint.days
         let closest = Self.dueChoices.min { abs($0.1 - current) < abs($1.1 - current) }?.1
         return VStack(alignment: .leading, spacing: 8) {

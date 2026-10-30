@@ -261,6 +261,7 @@ img { user-select: none; -webkit-user-drag: none; }
 .hint.center { text-align: center; }
 .date-row { display: flex; align-items: center; justify-content: space-between; font-family: var(--cute); font-size: 15px; }
 .date-row input { border: 0; background: #fff; border-radius: 8px; padding: 6px 8px; font-size: 14px; color: var(--ink); }
+.date-input { border: 0; background: #fff; border-radius: 10px; padding: 8px 10px; font-size: 15px; color: var(--ink); font-family: inherit; }
 .due-box { display: flex; flex-direction: column; gap: 10px; }
 
 /* 详情卡 */

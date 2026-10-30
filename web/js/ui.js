@@ -140,10 +140,11 @@
   };
 
   // ---------- 放进冰箱 / 编辑 ----------
+  // 从放进来那天起算：补记前几天放的东西，日期不会被往后推
   const shelfLife = (days, draft) => {
-    const now = new Date();
-    draft.eatBy = F.iso(F.addDays(now, Math.max(days - 1, 0)));
-    draft.expiresAt = F.iso(F.addDays(now, days));
+    const start = F.startOfDay(draft.addedAt ? new Date(draft.addedAt) : new Date());
+    draft.eatBy = F.iso(F.addDays(start, Math.max(days - 1, 0)));
+    draft.expiresAt = F.iso(F.addDays(start, days));
   };
   const dayText = (days) => (days >= 30 ? `${Math.floor(days / 30)} 个月` : days === 7 ? '1 周' : days === 14 ? '2 周' : `${days} 天`);
   const suggested = (draft) => {
@@ -231,6 +232,16 @@
         zoneSel.value = draft.zone;
         zoneSel.addEventListener('change', () => { draft.zone = zoneSel.value; autoDue(); renderDue(); });
         body.appendChild(ui.field('放在哪', zoneSel));
+        // 放进来（可以往前改，补记前几天买的东西）
+        const addedInp = h('input', 'date-input'); addedInp.type = 'date';
+        addedInp.max = F.dateInput(F.iso(new Date()));
+        addedInp.value = F.dateInput(draft.addedAt || F.iso(new Date()));
+        addedInp.addEventListener('change', () => {
+          if (!addedInp.value) return;
+          draft.addedAt = F.iso(new Date(addedInp.value + 'T12:00:00'));
+          autoDue(); renderDue();
+        });
+        body.appendChild(ui.field('放进来', addedInp));
         // 建议吃完
         const dueBox = h('div', 'due-box');
         const autoDue = () => { if (!isNew || dateTouched) return; shelfLife(suggested(draft).days, draft); hasDue = true; };
@@ -242,7 +253,8 @@
           if (!hasDue) return;
           const hint = suggested(draft);
           dueBox.appendChild(h('div', 'hint', F.esc(hint.why)));
-          const cur = draft.eatBy ? F.due.daysLeft({ eatBy: draft.eatBy }) + 1 : hint.days;
+          const from = F.startOfDay(draft.addedAt ? new Date(draft.addedAt) : new Date());
+          const cur = draft.eatBy ? Math.round((F.startOfDay(new Date(draft.eatBy)) - from) / 86400000) + 1 : hint.days;
           let closest = DUE_CHOICES[0][1], best = Infinity;
           DUE_CHOICES.forEach(([, d]) => { if (Math.abs(d - cur) < best) { best = Math.abs(d - cur); closest = d; } });
           const row = h('div', 'hscroll chips small');
