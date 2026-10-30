@@ -1,6 +1,6 @@
 // 离线缓存：第一次打开把页面、图片、字体都存下来，之后没网也能玩（PWA）。
 // 改了网页或换了图片，把 VERSION 改个数，用户下次打开会自动换新。
-const VERSION = 'fridge-v1';
+const VERSION = 'fridge-v2';
 const FILES = [
   "./",
   "index.html",
@@ -13,6 +13,7 @@ const FILES = [
   "js/app.js",
   "js/data.js",
   "js/stage.js",
+  "js/recipes.js",
   "js/ui.js",
   "js/views.js",
   "../assets/fridge/fridge_body.png",
@@ -71,6 +72,7 @@ const FILES = [
   "../assets/stickers/unknown_food_box.png",
   "../assets/stickers/water.png",
   "../assets/stickers/yogurt.png",
+  "../assets/recipes.json",
   "../assets/fonts/WoAiWanWeiWeiShouXieTi.ttf",
   "../assets/fonts/ZCOOLKuaiLe-Regular.ttf"
 ];

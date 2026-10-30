@@ -14,6 +14,7 @@
       this.hint = document.getElementById('hint');
       this.pills = document.getElementById('pills');
       document.getElementById('menuBtn').addEventListener('click', (e) => this.mainMenu(e.currentTarget));
+      document.getElementById('recipeBtn').addEventListener('click', () => this.openRecipes());
       this.stage = new F.Stage(this, this.viewport);
       F.store.on((what) => { this.stage.onStoreChange(what); if (what !== 'paint' && what !== 'move') this.refreshZoneCard(); });
       this.renderControls();
@@ -35,8 +36,10 @@
       this.hint.textContent = open ? '点一层凑近看看 · 点空白处关门' : '点门打开 · 门上的东西可以拖';
       this.pills.innerHTML = '';
       const pill = (title, icon, cls, fn) => { const b = h('button', 'pill ' + cls, F.icon(icon, 13) + `<span>${title}</span>`); b.addEventListener('click', fn); this.pills.appendChild(b); };
-      if (open) pill('关门', 'door', '', () => this.stage.toggleDoor());
-      else {
+      if (open) {
+        pill('关门', 'door', 'compact', () => this.stage.toggleDoor());
+        pill('今天吃什么', 'fork', 'compact', () => this.openRecipes());
+      } else {
         pill('贴便签', 'note', 'compact', () => F.ui.noteComposer((text, style) => { F.store.addNote(text, 'me', style); this.toast('便签贴上啦'); }));
         pill('贴照片', 'photo', 'compact', () => F.ui.magnetSheet());
       }
@@ -62,6 +65,21 @@
       this.zoneCardEl = card;
       this.root.appendChild(card);
       requestAnimationFrame(() => card.classList.add('shown'));
+    },
+
+    // ---------- 今天吃什么 ----------
+    openRecipes() { F.recipes.sheet((used) => this.cooked(used)); },
+    /// 照菜谱做完一道：勾上的东西各吃掉一份，最后一份的整张揭下来
+    cooked(used) {
+      if (!used.length) return;
+      F.later(450, () => {
+        used.forEach((item) => {
+          const live = F.store.item(item.id);
+          if (!live) return;
+          if (live.quantity > 1) F.store.consume(live.id); else this.stage.peelOff(live, null, 0);
+        });
+        this.toast('用掉了' + used.map((i) => i.name).join('、'));
+      });
     },
 
     // ---------- 详情 / 编辑 ----------
@@ -101,6 +119,8 @@
     if (raw === 'note:style') { const n = F.store.notes[0]; if (n) { F.later(600, () => st.openNote(n)); F.later(1400, () => st.togglePanel('style')); } }
     if (raw === 'editor') F.later(300, () => app.openEditor({ item: null, zone: null }));
     if (raw === 'composer') F.later(300, () => F.ui.noteComposer((t, s) => F.store.addNote(t, 'me', s)));
+    if (raw === 'recipes') { st.isOpen = true; st.applyDoor(1); st.applyCamera(false); app.renderControls(); F.later(300, () => app.openRecipes()); }
+    if (raw.startsWith('recipe:')) { F.later(300, () => { app.openRecipes(); F.recipes.load().then(() => F.later(450, () => { const q = document.querySelector('.rc-input'); if (q) { q.value = raw.slice(7); q.dispatchEvent(new Event('input')); const r = document.querySelector('.rc-row'); if (r) r.click(); } })); }); }
     if (raw === 'paint') F.later(300, () => F.ui.paintSheet());
     if (raw === 'photos') F.later(300, () => F.ui.magnetSheet());
     if (raw.startsWith('peel:')) { st.isOpen = true; st.applyDoor(1); st.applyCamera(false); const v = Number(raw.slice(5)); F.store.itemsIn('crisper').slice(0, 2).forEach((it) => { st.peeling[it.id] = v; }); st.renderZones(); }

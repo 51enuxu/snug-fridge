@@ -7,5 +7,6 @@ DEST=ios/FridgeDemo.swiftpm/Sources/Resources
 mkdir -p "$DEST/Fridge/stickers" "$DEST/Fonts"
 cp assets/fridge/*.png "$DEST/Fridge/"
 cp assets/stickers/*.png "$DEST/Fridge/stickers/"
+cp assets/recipes.json "$DEST/Fridge/"
 cp assets/fonts/* "$DEST/Fonts/"
 echo "已同步到 $DEST"

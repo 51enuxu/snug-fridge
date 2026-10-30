@@ -19,6 +19,7 @@
 - **门上便签**：6 种纸、8 种固定方式（磁铁、胶带），4 种字体，字号可调，能贴装饰小贴纸，能拖动；点开放大编辑，揭下来时先拿掉磁铁或胶带再把纸拿走。
 - **门上照片**：抠图贴、拍立得、人生四格。可以换相框颜色、换顶上的磁铁或胶带、在框里挪构图和转方向，在门上拖动、旋转。
 - **上下顺序**：门上的便签和照片可以「放到最上面 / 最下面」。
+- **今天吃什么**：自带 353 道家常菜的菜谱库，按冰箱里有的东西挑出「现在就能做」和「差一两样」的，快过期的优先；点进去看用料（标出冰箱有 / 调料 / 要买）和步骤，做完点「做了这道」，勾上的东西各吃掉一份。
 - **换漆面颜色**：7 种预设，也可以自己调。
 - **和 TA 共用**（可选）：接上自带的小后端就能两台设备同步；后端还带了 5 个 AI 工具，可以让你的 AI 助手帮忙看冰箱、放东西、贴便签。
 
@@ -28,6 +29,7 @@
 assets/                 图片和字体（网页版直接读这里）
   fridge/               冰箱分层图（箱体、四块门板，各配 _shade / _gloss 换色遮罩）
   stickers/             41 张食物贴纸
+  recipes.json          今天吃什么的菜谱库
   fonts/                站酷快乐体、我爱万伟伟手写体
 ios/FridgeDemo.swiftpm  iOS 演示 app（Xcode 或 iPad 上的 Swift Playgrounds 直接打开）
 web/                    网页版（纯静态，可加到主屏幕当 PWA 用）
@@ -348,6 +350,24 @@ iOS 在 `FridgeDecor.swift` 的 `FridgePaint.presets`，网页在 `data.js` 的 
 - `addedBy` / `author` 是 `me`（自己）或 `partner`（TA）。
 - 照片本身只存在各自的设备上，快照里只记文件名。
 
+## 今天吃什么 / 菜谱库
+
+冰箱页顶栏的叉勺图标（门打开时底下也有「今天吃什么」）会打开菜谱库。匹配全在本地做：把菜谱的主料和冰箱里的东西对一遍（认常见叫法，比如西红柿 = 番茄；盐、油、葱姜蒜这类家里常备的调料不算「缺」），至少用上一样、最多缺三样的会列出来，能直接做的排前面，其次是用上快过期食材多的。也可以直接搜菜名。
+
+菜谱来自开源项目 [HowToCook（程序员做饭指南）](https://github.com/Anduin2017/HowToCook)，Unlicense 协议，数据在 `assets/recipes.json`。想换成自己的菜谱，替换这个文件再跑 `./scripts/sync-assets.sh`（会同步到 iOS 包里）就行，格式是：
+
+```json
+{"source": "你的来源", "recipes": [
+  {"name": "番茄炒蛋", "cat": "素菜", "stars": 2, "lead": "一句话介绍",
+   "ingredients": [{"name": "西红柿", "optional": false, "amount": "2 个"}],
+   "steps": ["第一步", "第二步\n· 小贴士也可以写在步骤后面，每条以换行加「· 」开头"]}
+]}
+```
+
+`stars` 是难度（0 到 5），`amount` 可以不写。代码在 `ios/FridgeDemo.swiftpm/Sources/FridgeRecipes.swift` 和 `web/js/recipes.js`，两边的匹配规则一样，想加调料或同义词改里面的 `pantry` / `synonyms`（网页是 `PANTRY` / `SYNONYMS`）。
+
+作者自己的 app 里还有个让 AI 参谋的「问问 TA」模式，演示里没带；想接的话，可以用上面 AI 工具那几个现成的工具，把匹配到的菜和冰箱内容交给你自己的模型。
+
 ## AI 工具
 
 `server/tools.py` 里有 5 个工具，可以直接接给支持工具调用的大模型：
@@ -366,5 +386,6 @@ iOS 在 `FridgeDecor.swift` 的 `FridgePaint.presets`，网页在 `data.js` 的 
 
 - **代码**：MIT 协议，见 [LICENSE](LICENSE)。
 - **冰箱和食物贴纸的图片**：全部用 AI 生成，再由作者挑选、抠图和整理，随仓库提供，可以在你的个人项目和开源项目里使用。
+- **菜谱**：`assets/recipes.json` 整理自 [HowToCook](https://github.com/Anduin2017/HowToCook)，Unlicense 协议。
 - **站酷快乐体**：SIL Open Font License 1.1，见 `assets/fonts/ZCOOLKuaiLe_OFL.txt`。
 - **我爱万伟伟手写体**：来自喵闪字库，作者声明可免费商用。使用前请自行确认最新的授权说明。

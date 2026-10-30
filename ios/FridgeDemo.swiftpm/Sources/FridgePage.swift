@@ -39,6 +39,7 @@ struct FridgePageView: View {
     @State private var editorTarget: FridgeEditorTarget?
     @State private var composingNote = false
     @State private var paintOpen = false
+    @State private var recipeOpen = false
     @State private var magnetSheetOpen = false
     @State private var confirmClear = false
     /// 门上选中的照片（显示 ×）
@@ -64,6 +65,12 @@ struct FridgePageView: View {
             backdrop.ignoresSafeArea()
             VStack(spacing: 0) {
                 FridgeTopBar(theme: theme, title: "我们的冰箱", sub: "FRIDGE") {
+                    Button { recipeOpen = true } label: {
+                        Image(systemName: "fork.knife")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(theme.textSub)
+                            .frame(width: 36, height: 36)
+                    }
                     Button { settingsOpen = true } label: {
                         Image(systemName: "gearshape")
                             .font(.system(size: 16, weight: .semibold))
@@ -157,6 +164,10 @@ struct FridgePageView: View {
             Button("算了", role: .cancel) {}
         } message: {
             Text("里面的东西、门上的便签和照片都会拿掉，同步的话 TA 那边也会看到空冰箱。")
+        }
+        .sheet(isPresented: $recipeOpen) {
+            FridgeRecipeSheet(theme: theme, store: store, onCooked: cooked)
+                .environment(\.colorScheme, .light)
         }
         .sheet(isPresented: $magnetSheetOpen) {
             FridgeMagnetSheet(theme: theme, store: store)
@@ -760,7 +771,8 @@ struct FridgePageView: View {
                 .foregroundStyle(Color(cpHex: "#9C8470"))
             HStack(spacing: 12) {
                 if isOpen {
-                    pillButton("关门", icon: "door.left.hand.closed") { toggleDoor() }
+                    pillButton("关门", icon: "door.left.hand.closed", compact: true) { toggleDoor() }
+                    pillButton("今天吃什么", icon: "fork.knife", compact: true) { recipeOpen = true }
                 } else {
                     pillButton("贴便签", icon: "note.text", compact: true) { composingNote = true }
                     pillButton("贴照片", icon: "photo.on.rectangle", compact: true) { magnetSheetOpen = true }
@@ -838,6 +850,18 @@ struct FridgePageView: View {
                 return
             }
             peelOff(item, toast: "\(item.name)吃光光啦", delay: 0)
+        }
+    }
+
+    /// 照菜谱做完一道：勾上的东西各吃掉一份，最后一份的整张揭下来
+    private func cooked(_ used: [FridgeItem]) {
+        guard !used.isEmpty else { return }
+        later(0.45) {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            for item in used {
+                if item.quantity > 1 { store.consume(item.id) } else { peelOff(item, toast: nil, delay: 0) }
+            }
+            showToast("用掉了" + used.map(\.name).joined(separator: "、"))
         }
     }
 
