@@ -1,0 +1,12 @@
+.build-ios/
+.build/
+DerivedData/
+xcuserdata/
+.swiftpm/
+.DS_Store
+__pycache__/
+*.pyc
+server/fridge_data.json
+server/.fridge-*.tmp
+node_modules/
+.trash_shots/
